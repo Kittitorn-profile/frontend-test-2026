@@ -1,0 +1,36 @@
+.flagCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 96%, white) 0%,
+    color-mix(in srgb, var(--muted) 45%, var(--card)) 100%
+  );
+  box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease;
+}
+
+.flagCard:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: 0 10px 28px rgb(15 23 42 / 10%);
+}
+
+.flagCard[data-disabled='true'] {
+  background: color-mix(in srgb, var(--muted) 75%, var(--card));
+  opacity: 0.72;
+}
+
+@media (min-width: 40rem) {
+  .flagCard {
+    padding: 1.25rem;
+  }
+}
+

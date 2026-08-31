@@ -6,62 +6,50 @@ import { DeleteIconButton } from '#/components/ui/delete-icon-button'
 
 import { useFeatureFlagFormContext } from '../hooks/use-feature-flag-form-context'
 
-export function VariationsSection() {
+export function MetadataEntriesSection() {
   const form = useFeatureFlagFormContext()
+
   return (
-    <form.Field name="variations" mode="array">
+    <form.Field name="metadata" mode="array">
       {(arrayField) => (
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="font-semibold">Variations</h3>
-              <p className="text-xs text-muted-foreground">
-                Values returned when this flag is evaluated.
-              </p>
-            </div>
+            <h3 className="text-xl font-bold tracking-tight">Metadata</h3>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() =>
-                arrayField.pushValue({
-                  name: `variation-${arrayField.state.value.length + 1}`,
-                  value: '',
-                })
-              }
+              onClick={() => arrayField.pushValue({ key: '', value: '' })}
             >
-              <CirclePlus /> Add variation
+              <CirclePlus /> Add metadata
             </Button>
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-3">
             {arrayField.state.value.map((_, index) => (
               <div
                 key={index}
-                className="grid gap-3 rounded-xl border-border bg-muted/30 p-0 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
+                className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
               >
-                <form.AppField name={`variations[${index}].name`}>
+                <form.AppField name={`metadata[${index}].key`}>
                   {(field) => (
-                    <label>
-                      <field.TextField label="Name" />
-                    </label>
+                    <field.TextField label="Key" placeholder="team" />
                   )}
                 </form.AppField>
-                <form.AppField name={`variations[${index}].value`}>
+                <form.AppField name={`metadata[${index}].value`}>
                   {(field) => (
-                    <label>
-                      <field.TextField label="Flag Value" />
-                    </label>
+                    <field.TextField label="Value" placeholder="checkout" />
                   )}
                 </form.AppField>
                 <DeleteIconButton
                   className="sm:mt-2"
-                  disabled={arrayField.state.value.length <= 2}
                   onClick={() => arrayField.removeValue(index)}
-                  aria-label={`Remove variation ${index + 1}`}
+                  aria-label={`Remove metadata ${index + 1}`}
                 />
               </div>
             ))}
           </div>
+
           <FieldError errors={arrayField.state.meta.errors} />
         </section>
       )}

@@ -1,15 +1,24 @@
-import { Braces, Plus, Trash2 } from 'lucide-react'
+import { Braces, Plus } from 'lucide-react'
 
 import { FieldError } from '#/components/form'
 import { Button } from '#/components/ui/button'
+import { DeleteIconButton } from '#/components/ui/delete-icon-button'
 
-import type { ConditionGroup, TargetingRule } from '../schema'
+import type {
+  ConditionGroup,
+  ProgressiveRollout,
+  TargetingRule,
+} from '../schema'
 import {
   PercentageRolloutEditor,
   ProgressiveRolloutEditor,
 } from './rollout-editors'
 import { RuleBuilder } from './rule-builder'
-import { VariationSelect } from './variation-select'
+import {
+  createServeOptions,
+  getServeSelectValue,
+  parseServeSelectValue,
+} from './serve-options'
 import { useFeatureFlagFormContext } from '../hooks/use-feature-flag-form-context'
 
 const labelClass = 'mb-1.5 block text-sm font-medium text-foreground'
@@ -119,16 +128,11 @@ export function TargetingSection() {
                           </div>
                         )}
                       </form.AppField>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="mt-6 rounded-full"
+                      <DeleteIconButton
+                        className="mt-2"
                         onClick={() => arrayField.removeValue(index)}
                         aria-label={`Remove targeting rule ${index + 1}`}
-                      >
-                        <Trash2 />
-                      </Button>
+                      />
                     </div>
 
                     <RuleBuilder
@@ -143,7 +147,7 @@ export function TargetingSection() {
                     />
 
                     <div className="mt-4 border-t border-border pt-4">
-                      <form.Field name={`targeting[${index}].variation`}>
+                      <form.AppField name={`targeting[${index}].variation`}>
                         {(field) => (
                           <label>
                             <span className={labelClass}>Serve</span>
@@ -155,16 +159,25 @@ export function TargetingSection() {
                               })}
                             >
                               {({ variations, serveMode }) => (
-                                <VariationSelect
-                                  variations={variations}
-                                  value={field.state.value}
-                                  serveMode={serveMode}
-                                  onChange={field.handleChange}
-                                  onServeModeChange={(nextMode) => {
+                                <field.SelectField
+                                  label="Serve"
+                                  value={getServeSelectValue(
+                                    serveMode,
+                                    field.state.value,
+                                  )}
+                                  options={createServeOptions(variations)}
+                                  onValueChange={(value) => {
+                                    const selected =
+                                      parseServeSelectValue(String(value))
+                                    if (!selected) return
+
                                     form.setFieldValue(
                                       `targeting[${index}].serveMode`,
-                                      nextMode,
+                                      selected.mode,
                                     )
+                                    if (selected.mode === 'variation') {
+                                      field.handleChange(selected.variation)
+                                    }
                                   }}
                                 />
                               )}
@@ -172,7 +185,7 @@ export function TargetingSection() {
                             <FieldError errors={field.state.meta.errors} />
                           </label>
                         )}
-                      </form.Field>
+                      </form.AppField>
                       <form.Subscribe
                         selector={(state) => ({
                           variations: state.values.variations,

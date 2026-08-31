@@ -1,4 +1,5 @@
 import Editor from '@monaco-editor/react'
+import { ClientOnly } from '@tanstack/react-router'
 import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 
@@ -35,21 +36,29 @@ export function JsonPreview({ value }: { value: unknown }) {
           {copied ? 'Copied' : 'Copy'}
         </Button>
       </header>
-      <Editor
-        height="620px"
-        language="json"
-        theme="vs-dark"
-        value={json}
-        options={{
-          readOnly: true,
-          minimap: { enabled: false },
-          fontSize: 13,
-          folding: true,
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-          padding: { top: 16, bottom: 16 },
-        }}
-      />
+      <ClientOnly
+        fallback={
+          <pre className="h-[620px] overflow-auto p-4 text-xs text-slate-300">
+            {json}
+          </pre>
+        }
+      >
+        <Editor
+          height="620px"
+          language="json"
+          theme="vs-dark"
+          value={json}
+          options={{
+            readOnly: true,
+            minimap: { enabled: false },
+            fontSize: 13,
+            folding: true,
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            padding: { top: 16, bottom: 16 },
+          }}
+        />
+      </ClientOnly>
     </section>
   )
 }

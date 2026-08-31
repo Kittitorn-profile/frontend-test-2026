@@ -4,7 +4,11 @@ import {
   PercentageRolloutEditor,
   ProgressiveRolloutEditor,
 } from './rollout-editors'
-import { VariationSelect } from './variation-select'
+import {
+  createServeOptions,
+  getServeSelectValue,
+  parseServeSelectValue,
+} from './serve-options'
 import { useFeatureFlagFormContext } from '../hooks/use-feature-flag-form-context'
 
 const labelClass = 'mb-1.5 block text-sm font-medium text-foreground'
@@ -13,7 +17,7 @@ export function DefaultRuleSection() {
   const form = useFeatureFlagFormContext()
   return (
     <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <form.Field name="defaultVariation">
+      <form.AppField name="defaultVariation">
         {(field) => (
           <label>
             <span className={labelClass}>Default variation</span>
@@ -30,14 +34,22 @@ export function DefaultRuleSection() {
             >
               {({ variations, serveMode, percentages, progressiveRollout }) => (
                 <>
-                  <VariationSelect
-                    variations={variations}
-                    value={field.state.value}
-                    serveMode={serveMode}
-                    onChange={field.handleChange}
-                    onServeModeChange={(nextMode) =>
-                      form.setFieldValue('defaultServeMode', nextMode)
-                    }
+                  <field.SelectField
+                    label="Default variation"
+                    value={getServeSelectValue(
+                      serveMode,
+                      field.state.value,
+                    )}
+                    options={createServeOptions(variations)}
+                    onValueChange={(value) => {
+                      const selected = parseServeSelectValue(String(value))
+                      if (!selected) return
+
+                      form.setFieldValue('defaultServeMode', selected.mode)
+                      if (selected.mode === 'variation') {
+                        field.handleChange(selected.variation)
+                      }
+                    }}
                   />
                   {serveMode === 'percentage' ? (
                     <PercentageRolloutEditor
@@ -69,7 +81,7 @@ export function DefaultRuleSection() {
             <FieldError errors={field.state.meta.errors} />
           </label>
         )}
-      </form.Field>
+      </form.AppField>
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import type { FocusEventHandler, InputHTMLAttributes } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
-import { Checkbox, Select, Slider } from 'radix-ui'
+import { Checkbox, Select, Slider, Switch } from 'radix-ui'
 
 import { Input } from '#/components/ui/input'
 import { cn } from '#/lib/utils'
@@ -58,7 +58,7 @@ export function FormInput({
         <Input
           {...inputProps}
           className={cn(
-            'peer h-14 px-4 pt-5 pb-2 text-base placeholder:opacity-0 focus:placeholder:opacity-100 md:text-base',
+            'peer h-14 bg-background px-4 pt-5 pb-2 text-base placeholder:opacity-0 focus:placeholder:opacity-100 md:text-base dark:bg-background',
             className,
           )}
           placeholder={inputProps.placeholder ?? ' '}
@@ -68,7 +68,7 @@ export function FormInput({
           aria-invalid={errors.length > 0}
           aria-label={label}
         />
-        <span className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 px-1 text-base leading-none text-muted-foreground transition-all peer-focus:top-1 peer-focus:bg-background peer-focus:text-sm peer-focus:text-foreground peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:bg-background peer-[:not(:placeholder-shown)]:text-sm peer-[:not(:placeholder-shown)]:text-foreground">
+        <span className="pointer-events-none absolute top-1/2 left-3 z-20 -translate-y-1/2 bg-background px-2 py-0.5 text-base leading-none text-muted-foreground transition-all peer-focus:top-1 peer-focus:text-sm peer-focus:text-foreground peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-sm peer-[:not(:placeholder-shown)]:text-foreground">
           {label}
         </span>
       </label>
@@ -89,6 +89,8 @@ type FormSelectFieldProps<T extends string | boolean> = {
   label: string
   options: Array<SelectOption<T>>
   hideLabel?: boolean
+  value?: T
+  onValueChange?: (value: T) => void
 }
 
 export function FormSelectField<T extends string | boolean>({
@@ -96,26 +98,37 @@ export function FormSelectField<T extends string | boolean>({
   label,
   options,
   hideLabel = false,
+  value,
+  onValueChange,
 }: FormSelectFieldProps<T>) {
   return (
     <div>
-      {hideLabel ? null : <span className={labelClass}>{label}</span>}
-      <RadixSelect
-        label={label}
-        value={String(field.state.value)}
-        onValueChange={(value) => {
-          const selected = options.find(
-            (option) => String(option.value) === value,
-          )
-          if (selected) field.handleChange(selected.value)
-        }}
-        onBlur={field.handleBlur}
-        options={options.map((option) => ({
-          value: String(option.value),
-          label: option.label,
-        }))}
-        invalid={field.state.meta.errors.length > 0}
-      />
+      <div className="relative pt-1">
+        <RadixSelect
+          label={label}
+          value={String(value ?? field.state.value)}
+          onValueChange={(nextValue) => {
+            const selected = options.find(
+              (option) => String(option.value) === nextValue,
+            )
+            if (!selected) return
+            if (onValueChange) onValueChange(selected.value)
+            else field.handleChange(selected.value)
+          }}
+          onBlur={field.handleBlur}
+          options={options.map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          invalid={field.state.meta.errors.length > 0}
+          className="h-14 px-4 pt-3 text-base md:text-base"
+        />
+        {hideLabel ? null : (
+          <span className="pointer-events-none absolute top-1 left-3 z-20 -translate-y-1/2 bg-background px-2 py-0.5 text-sm leading-none text-foreground">
+            {label}
+          </span>
+        )}
+      </div>
       <FieldError errors={field.state.meta.errors} />
     </div>
   )
@@ -142,6 +155,29 @@ export function CheckboxField({
           <Check className="size-3.5" />
         </Checkbox.Indicator>
       </Checkbox.Root>
+    </span>
+  )
+}
+
+export function SwitchField({
+  field,
+  label,
+}: {
+  field: FieldAdapter<boolean>
+  label: string
+}) {
+  return (
+    <span className="flex items-center gap-3">
+      <span className="text-sm font-medium">{label}</span>
+      <Switch.Root
+        checked={field.state.value}
+        onCheckedChange={field.handleChange}
+        onBlur={field.handleBlur}
+        aria-label={label}
+        className="relative h-7 w-12 cursor-pointer rounded-full bg-slate-200 outline-none transition-colors data-[state=checked]:bg-teal-500 focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-slate-700 dark:data-[state=checked]:bg-teal-500"
+      >
+        <Switch.Thumb className="block size-5 translate-x-1 rounded-full bg-white shadow-sm transition-transform data-[state=checked]:translate-x-6" />
+      </Switch.Root>
     </span>
   )
 }

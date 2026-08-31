@@ -144,7 +144,16 @@ export const featureFlagSchema = z
         'Use lowercase letters, numbers, and hyphens only',
       ),
     description: z.string().trim().max(160, 'Maximum 160 characters'),
-    enabled: z.boolean(),
+    flagType: z.enum(['boolean', 'string', 'number', 'json']),
+    version: z.string().trim().max(50, 'Maximum 50 characters'),
+    disable: z.boolean(),
+    trackEvents: z.boolean(),
+    metadata: z.array(
+      z.object({
+        key: z.string().trim().min(1, 'Metadata key is required'),
+        value: z.string(),
+      }),
+    ),
     variations: z.array(variationSchema).min(2, 'Add at least 2 variations'),
     targeting: z.array(targetingRuleSchema),
     defaultServeMode: z.enum(['variation', 'percentage', 'progressive']),
@@ -165,6 +174,45 @@ export const featureFlagSchema = z
         message: `Variation name “${duplicateName}” must be unique`,
       })
     }
+
+    const metadataKeys = data.metadata
+      .map((item) => item.key.trim())
+      .filter(Boolean)
+    const duplicateMetadataKey = metadataKeys.find(
+      (key, index) => metadataKeys.indexOf(key) !== index,
+    )
+    if (duplicateMetadataKey) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: `Metadata key “${duplicateMetadataKey}” must be unique`,
+      })
+    }
+
+    data.variations.forEach((variation, index) => {
+      const value = variation.value.trim()
+      let isValid = true
+
+      if (data.flagType === 'boolean') {
+        isValid = value === 'true' || value === 'false'
+      } else if (data.flagType === 'number') {
+        isValid = value !== '' && Number.isFinite(Number(value))
+      } else if (data.flagType === 'json') {
+        try {
+          JSON.parse(value)
+        } catch {
+          isValid = false
+        }
+      }
+
+      if (!isValid) {
+        context.addIssue({
+          code: 'custom',
+          path: ['variations', index, 'value'],
+          message: `Enter a valid ${data.flagType} value`,
+        })
+      }
+    })
 
     if (!names.includes(data.defaultVariation)) {
       context.addIssue({
@@ -264,7 +312,11 @@ export const featureFlagSchema = z
 export type FeatureFlagFormValues = {
   key: string
   description: string
-  enabled: boolean
+  flagType: 'boolean' | 'string' | 'number' | 'json'
+  version: string
+  disable: boolean
+  trackEvents: boolean
+  metadata: Array<{ key: string; value: string }>
   variations: Array<{ name: string; value: string }>
   targeting: TargetingRule[]
   defaultServeMode: 'variation' | 'percentage' | 'progressive'
@@ -276,51 +328,16 @@ export type FeatureFlagFormValues = {
 export const defaultValues: FeatureFlagFormValues = {
   key: 'my-new-feature',
   description: 'Gradually release the redesigned experience',
-  enabled: true,
+  flagType: 'boolean',
+  version: '',
+  disable: false,
+  trackEvents: false,
+  metadata: [],
   variations: [
     { name: 'on', value: 'true' },
     { name: 'off', value: 'false' },
   ],
-  targeting: [
-    {
-      name: 'Rule 1',
-      conditions: {
-        id: 'root-group-1',
-        type: 'group',
-        combinator: 'AND',
-        children: [
-          {
-            id: 'condition-group-beta',
-            type: 'condition',
-            attribute: 'group',
-            customAttribute: '',
-            operator: 'equals',
-            value: 'beta',
-          },
-          {
-            id: 'condition-role-guest',
-            type: 'condition',
-            attribute: 'role',
-            customAttribute: '',
-            operator: 'not_equals',
-            value: 'guest',
-          },
-        ],
-      },
-      serveMode: 'percentage',
-      percentage: 50,
-      rolloutPercentages: [50, 50],
-      progressiveRollout: {
-        startDate: '2026-08-31T17:57',
-        endDate: '2026-09-10T17:57',
-        startVariation: 'on',
-        endVariation: 'on',
-        startPercentage: 0,
-        endPercentage: 100,
-      },
-      variation: 'on',
-    },
-  ],
+  targeting: [],
   defaultServeMode: 'variation',
   defaultRolloutPercentages: [50, 50],
   defaultProgressiveRollout: {
@@ -377,7 +394,14 @@ function toIsoDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toISOString()
 }
 
-function parseVariationValue(value: string): unknown {
+function parseVariationValue(
+  value: string,
+  flagType: FeatureFlagFormValues['flagType'],
+): unknown {
+  if (flagType === 'string') return value
+  if (flagType === 'number') return Number(value)
+  if (flagType === 'boolean') return value === 'true'
+
   try {
     return JSON.parse(value)
   } catch {
@@ -391,9 +415,19 @@ export function toFeatureFlagOutput(values: FeatureFlagFormValues) {
       variations: Object.fromEntries(
         values.variations.map(({ name, value }) => [
           name,
-          parseVariationValue(value),
+          parseVariationValue(value, values.flagType),
         ]),
       ),
+      ...(values.version.trim() ? { version: values.version.trim() } : {}),
+      disable: values.disable,
+      trackEvents: values.trackEvents,
+      ...(values.metadata.length > 0
+        ? {
+            metadata: Object.fromEntries(
+              values.metadata.map(({ key, value }) => [key.trim(), value]),
+            ),
+          }
+        : {}),
       targeting: values.targeting.map((rule) => ({
         name: rule.name,
         query: ruleNodeToQuery(rule.conditions),
@@ -449,7 +483,9 @@ export function toFeatureFlagOutput(values: FeatureFlagFormValues) {
                   },
                 },
               }
-            : { variation: values.defaultVariation },
+            : values.defaultVariation
+              ? { variation: values.defaultVariation }
+              : {},
     },
   }
 }

@@ -15,10 +15,11 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Braces, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { Braces, GripVertical, Plus } from 'lucide-react'
 
 import { SelectField } from '#/components/form'
 import { Button } from '#/components/ui/button'
+import { DeleteIconButton } from '#/components/ui/delete-icon-button'
 import { Input } from '#/components/ui/input'
 
 import type {
@@ -354,7 +355,7 @@ function SortableRuleNode({
       <button
         ref={setActivatorNodeRef}
         type="button"
-        className="mt-2 flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+        className="flex size-7 shrink-0 self-center cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
         aria-label={`Drag ${child.type}`}
         {...attributes}
         {...listeners}
@@ -375,17 +376,12 @@ function SortableRuleNode({
           />
         )}
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="mt-2 justify-self-center text-muted-foreground hover:text-destructive"
+      <DeleteIconButton
+        className="self-center justify-self-center"
         disabled={!canRemove}
         onClick={() => onRemove(index)}
         aria-label="Remove condition"
-      >
-        <Trash2 />
-      </Button>
+      />
     </div>
   )
 }

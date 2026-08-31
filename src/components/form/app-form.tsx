@@ -6,6 +6,7 @@ import {
   FormInput,
   FormSelectField,
   RangeField as RangeControl,
+  SwitchField as SwitchControl,
 } from './form-controls'
 import type { SelectOption } from './form-controls'
 
@@ -30,15 +31,32 @@ function CheckboxField({ label }: { label: string }) {
   return <CheckboxControl field={field} label={label} />
 }
 
+function SwitchField({ label }: { label: string }) {
+  const field = useFieldContext<boolean>()
+  return <SwitchControl field={field} label={label} />
+}
+
 function SelectField({
   label,
   options,
+  value,
+  onValueChange,
 }: {
   label: string
   options: Array<SelectOption<string | boolean>>
+  value?: string | boolean
+  onValueChange?: (value: string | boolean) => void
 }) {
   const field = useFieldContext<string | boolean>()
-  return <FormSelectField field={field} label={label} options={options} />
+  return (
+    <FormSelectField
+      field={field}
+      label={label}
+      options={options}
+      value={value}
+      onValueChange={onValueChange}
+    />
+  )
 }
 
 function RangeField({
@@ -64,6 +82,7 @@ export const { useAppForm, withForm, withFieldGroup } = createFormHook({
   fieldComponents: {
     TextField,
     CheckboxField,
+    SwitchField,
     SelectField,
     RangeField,
   },

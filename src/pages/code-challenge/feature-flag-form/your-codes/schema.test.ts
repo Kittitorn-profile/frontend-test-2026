@@ -1,6 +1,46 @@
 import { describe, expect, it } from 'vitest'
 
 import { defaultValues, featureFlagSchema, toFeatureFlagOutput } from './schema'
+import type { TargetingRule } from './schema'
+
+const exampleTargetingRule: TargetingRule = {
+  name: 'Rule 1',
+  conditions: {
+    id: 'root-group-1',
+    type: 'group',
+    combinator: 'AND',
+    children: [
+      {
+        id: 'condition-group-beta',
+        type: 'condition',
+        attribute: 'group',
+        customAttribute: '',
+        operator: 'equals',
+        value: 'beta',
+      },
+      {
+        id: 'condition-role-guest',
+        type: 'condition',
+        attribute: 'role',
+        customAttribute: '',
+        operator: 'not_equals',
+        value: 'guest',
+      },
+    ],
+  },
+  serveMode: 'percentage',
+  percentage: 50,
+  rolloutPercentages: [50, 50],
+  progressiveRollout: {
+    startDate: '2026-08-31T17:57',
+    endDate: '2026-09-10T17:57',
+    startVariation: 'on',
+    endVariation: 'on',
+    startPercentage: 0,
+    endPercentage: 100,
+  },
+  variation: 'on',
+}
 
 describe('feature flag schema', () => {
   it('accepts the example configuration', () => {
@@ -31,19 +71,47 @@ describe('feature flag schema', () => {
 
     expect(output['my-new-feature']).toMatchObject({
       variations: { on: true, off: false },
-      targeting: [
-        {
-          name: 'Rule 1',
-          query: '( and group eq beta and role ne guest)',
-          percentage: { on: 50, off: 50 },
-        },
-      ],
+      targeting: [],
       defaultRule: { variation: 'off' },
+    })
+  })
+
+  it('serializes flag metadata and values according to the selected type', () => {
+    const values = {
+      ...structuredClone(defaultValues),
+      flagType: 'number' as const,
+      version: '1.2.0',
+      disable: true,
+      trackEvents: true,
+      metadata: [
+        { key: 'team', value: 'checkout' },
+        { key: 'owner', value: 'frontend' },
+      ],
+      variations: [
+        { name: 'small', value: '10' },
+        { name: 'large', value: '25.5' },
+      ],
+      defaultVariation: 'small',
+      defaultProgressiveRollout: {
+        ...structuredClone(defaultValues.defaultProgressiveRollout),
+        startVariation: 'small',
+        endVariation: 'large',
+      },
+    }
+
+    expect(featureFlagSchema.safeParse(values).success).toBe(true)
+    expect(toFeatureFlagOutput(values)['my-new-feature']).toMatchObject({
+      variations: { small: 10, large: 25.5 },
+      version: '1.2.0',
+      disable: true,
+      trackEvents: true,
+      metadata: { team: 'checkout', owner: 'frontend' },
     })
   })
 
   it('supports recursively nested condition groups', () => {
     const values = structuredClone(defaultValues)
+    values.targeting.push(structuredClone(exampleTargetingRule))
     values.targeting[0].conditions.children.push({
       id: 'nested-group',
       type: 'group',
