@@ -9,10 +9,12 @@ export function ProgressiveRolloutEditor({
   variations,
   value,
   onChange,
+  showErrors = false,
 }: {
   variations: Variation[]
   value: ProgressiveRollout
   onChange: (value: ProgressiveRollout) => void
+  showErrors?: boolean
 }) {
   const variationOptions = variations.map((variation, index) => ({
     value: variation.name,
@@ -35,6 +37,7 @@ export function ProgressiveRolloutEditor({
           type="datetime-local"
           className="h-10 bg-background"
           value={value.startDate}
+          aria-invalid={showErrors && !value.startDate}
           onChange={(event) => update('startDate', event.target.value)}
         />
         <span>and serve</span>
@@ -64,6 +67,11 @@ export function ProgressiveRolloutEditor({
           type="datetime-local"
           className="h-10 bg-background"
           value={value.endDate}
+          aria-invalid={
+            showErrors &&
+            (!value.endDate ||
+              new Date(value.endDate) <= new Date(value.startDate))
+          }
           onChange={(event) => update('endDate', event.target.value)}
         />
         <span>and serve</span>
@@ -102,21 +110,27 @@ export function PercentageRolloutEditor({
   variations,
   percentages,
   onChange,
+  showErrors = false,
 }: {
   variations: Variation[]
   percentages: number[]
   onChange: (percentages: number[]) => void
+  showErrors?: boolean
 }) {
   const total = percentages.reduce(
     (sum, percentage, index) =>
-      index < variations.length ? sum + percentage : sum,
+      index < variations.length && Number.isFinite(percentage)
+        ? sum + percentage
+        : sum,
     0,
   )
   const updatePercentage = (index: number, percentage: number) => {
     const next = variations.map(
       (_, variationIndex) => percentages[variationIndex] ?? 0,
     )
-    next[index] = Math.min(100, Math.max(0, percentage || 0))
+    next[index] = Number.isFinite(percentage)
+      ? Math.min(100, Math.max(0, percentage))
+      : Number.NaN
     onChange(next)
   }
 
@@ -139,7 +153,10 @@ export function PercentageRolloutEditor({
               max={100}
               className="h-10 w-24 bg-background text-base md:text-base"
               aria-label={`${variation.name || `Variation ${index + 1}`} percentage`}
-              value={percentages[index] ?? 0}
+              value={
+                Number.isFinite(percentages[index]) ? percentages[index] : ''
+              }
+              aria-invalid={showErrors && !Number.isFinite(percentages[index])}
               onChange={(event) =>
                 updatePercentage(index, event.target.valueAsNumber)
               }
@@ -174,9 +191,9 @@ export function PercentageRolloutEditor({
           {total}%
         </span>
       </div>
-      {total !== 100 ? (
+      {total > 100 ? (
         <p className="text-xs text-destructive">
-          Percentages must add up to 100%.
+          Percentages cannot exceed 100%.
         </p>
       ) : null}
     </div>

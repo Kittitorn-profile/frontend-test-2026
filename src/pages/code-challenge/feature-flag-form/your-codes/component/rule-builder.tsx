@@ -76,9 +76,11 @@ function createGroup(): ConditionGroup {
 export function RuleBuilder({
   value,
   onChange,
+  showErrors = false,
 }: {
   value: ConditionGroup
   onChange: (value: ConditionGroup) => void
+  showErrors?: boolean
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -100,7 +102,12 @@ export function RuleBuilder({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <ConditionGroupEditor group={value} onChange={onChange} depth={0} />
+      <ConditionGroupEditor
+        group={value}
+        onChange={onChange}
+        depth={0}
+        showErrors={showErrors}
+      />
     </DndContext>
   )
 }
@@ -219,10 +226,12 @@ function ConditionGroupEditor({
   group,
   onChange,
   depth,
+  showErrors,
 }: {
   group: ConditionGroup
   onChange: (group: ConditionGroup) => void
   depth: number
+  showErrors: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `${GROUP_DROP_PREFIX}${group.id}`,
@@ -304,6 +313,7 @@ function ConditionGroupEditor({
               index={index}
               depth={depth}
               canRemove={group.children.length > 1}
+              showErrors={showErrors}
               onUpdate={updateChild}
               onRemove={removeChild}
             />
@@ -324,6 +334,7 @@ function SortableRuleNode({
   index,
   depth,
   canRemove,
+  showErrors,
   onUpdate,
   onRemove,
 }: {
@@ -331,6 +342,7 @@ function SortableRuleNode({
   index: number
   depth: number
   canRemove: boolean
+  showErrors: boolean
   onUpdate: (index: number, child: RuleNode) => void
   onRemove: (index: number) => void
 }) {
@@ -368,10 +380,12 @@ function SortableRuleNode({
             group={child}
             onChange={(next) => onUpdate(index, next)}
             depth={depth + 1}
+            showErrors={showErrors}
           />
         ) : (
           <ConditionEditor
             condition={child}
+            showErrors={showErrors}
             onChange={(next) => onUpdate(index, next)}
           />
         )}
@@ -389,9 +403,11 @@ function SortableRuleNode({
 function ConditionEditor({
   condition,
   onChange,
+  showErrors,
 }: {
   condition: ConditionNode
   onChange: (condition: ConditionNode) => void
+  showErrors: boolean
 }) {
   return (
     <div className="grid gap-2 rounded-lg bg-muted/70 p-2 md:grid-cols-[minmax(130px,0.8fr)_minmax(170px,1fr)_minmax(180px,1.3fr)]">
@@ -409,6 +425,7 @@ function ConditionEditor({
             customAttribute: value,
           })
         }
+        invalid={showErrors && !condition.customAttribute.trim()}
       />
       <div className="pt-1">
         <SelectField
@@ -428,6 +445,7 @@ function ConditionEditor({
           <FloatingInput
             label="Value"
             value={condition.value}
+            invalid={showErrors && !condition.value.trim()}
             onChange={(value) => onChange({ ...condition, value })}
           />
         )}
@@ -441,11 +459,13 @@ function FloatingInput({
   value,
   onChange,
   disabled = false,
+  invalid = false,
 }: {
   label: string
   value: string
   onChange?: (value: string) => void
   disabled?: boolean
+  invalid?: boolean
 }) {
   return (
     <label className="relative block pt-1">
@@ -455,6 +475,7 @@ function FloatingInput({
         placeholder=" "
         value={value}
         disabled={disabled}
+        aria-invalid={invalid}
         onChange={(event) => onChange?.(event.target.value)}
       />
       <span className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 px-1 text-base leading-none text-muted-foreground transition-all peer-focus:top-1 peer-focus:bg-background peer-focus:text-sm peer-focus:text-foreground peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:bg-background peer-[:not(:placeholder-shown)]:text-sm peer-[:not(:placeholder-shown)]:text-foreground">

@@ -27,11 +27,6 @@ type FeatureFlagFormState = Omit<FeatureFlagFormValues, 'targeting'> & {
   >
 }
 
-function validateFeatureFlag({ value }: { value: FeatureFlagFormState }) {
-  const result = featureFlagSchema.safeParse(value)
-  return result.success ? undefined : result.error
-}
-
 const createNewFlag = (key: string): FeatureFlagFormState => ({
   ...structuredClone(defaultValues),
   key,
@@ -58,8 +53,8 @@ function useFeatureFlagForm(
   return useAppForm({
     defaultValues: initialValues,
     validators: {
-      onChange: validateFeatureFlag,
-      onSubmit: validateFeatureFlag,
+      onChange: featureFlagSchema,
+      onSubmit: featureFlagSchema,
     },
     onSubmit: ({ value }) => {
       onSubmitValues(featureFlagSchema.parse(value) as FeatureFlagFormValues)
@@ -103,9 +98,7 @@ function FlagEditor({
   onFormReady: (id: number, form: FeatureFlagFormApi | null) => void
   onRemove: (id: number) => void
 }) {
-  const [initialValues] = useState(() =>
-    structuredClone(entry.initialValues),
-  )
+  const [initialValues] = useState(() => structuredClone(entry.initialValues))
   const form = useFeatureFlagForm(initialValues)
 
   useEffect(() => {
@@ -147,7 +140,6 @@ function FlagEditor({
               />
             )}
           </form.Subscribe>
-
         </div>
       </form.AppForm>
     </section>
@@ -162,18 +154,13 @@ export function FeatureFlagForm() {
     return [{ id: 0, initialValues: values, values }]
   })
 
-  const updateFlag = useCallback(
-    (id: number, values: FeatureFlagFormState) => {
-      setFlags((current) =>
-        current.map((flag) =>
-          flag.id === id && flag.values !== values
-            ? { ...flag, values }
-            : flag,
-        ),
-      )
-    },
-    [],
-  )
+  const updateFlag = useCallback((id: number, values: FeatureFlagFormState) => {
+    setFlags((current) =>
+      current.map((flag) =>
+        flag.id === id && flag.values !== values ? { ...flag, values } : flag,
+      ),
+    )
+  }, [])
 
   const addFlag = () => {
     const usedKeys = new Set(flags.map((flag) => flag.values.key))
@@ -207,20 +194,49 @@ export function FeatureFlagForm() {
   )
 
   const saveAllFlags = async () => {
-    const hasInvalidFlag = flags.some(
-      (flag) => !featureFlagSchema.safeParse(flag.values).success,
+    const forms = Array.from(formApis.current.values())
+
+    // Run submit validation for every editor so Standard Schema errors are
+    // distributed to their exact fields (including fields inside arrays).
+    await Promise.all(forms.map((form) => form.handleSubmit()))
+
+    const results = forms.map((form) =>
+      featureFlagSchema.safeParse(form.state.values),
+    )
+    if (results.some((result) => !result.success)) return
+
+    const keyCounts = forms.reduce((counts, form) => {
+      const key = form.state.values.key.trim()
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+      return counts
+    }, new Map<string, number>())
+    const duplicateKeyForms = forms.filter(
+      (form) => (keyCounts.get(form.state.values.key.trim()) ?? 0) > 1,
     )
 
-    if (hasInvalidFlag) {
-      await Promise.all(
-        Array.from(formApis.current.values()).map((form) =>
-          form.handleSubmit(),
-        ),
-      )
-      return
-    }
+    duplicateKeyForms.forEach((form) => {
+      form.setFieldMeta('key', (previous) => ({
+        ...previous,
+        errorMap: {
+          ...previous.errorMap,
+          onSubmit: [
+            {
+              message: 'Flag key must be unique across all flags',
+              path: ['key'],
+            },
+          ],
+        },
+      }))
+    })
+    if (duplicateKeyForms.length > 0) return
 
-    console.info('Feature flags saved >>>', preview)
+    const output = Object.assign(
+      {},
+      ...results.map((result) =>
+        result.success ? toFeatureFlagOutput(result.data) : {},
+      ),
+    )
+    console.info('Feature flags saved >>>', output)
   }
 
   return (

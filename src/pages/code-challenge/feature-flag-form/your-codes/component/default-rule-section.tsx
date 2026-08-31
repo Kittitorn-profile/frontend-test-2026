@@ -30,16 +30,20 @@ export function DefaultRuleSection() {
                 serveMode: state.values.defaultServeMode,
                 percentages: state.values.defaultRolloutPercentages,
                 progressiveRollout: state.values.defaultProgressiveRollout,
+                showErrors: state.submissionAttempts > 0,
               })}
             >
-              {({ variations, serveMode, percentages, progressiveRollout }) => (
+              {({
+                variations,
+                serveMode,
+                percentages,
+                progressiveRollout,
+                showErrors,
+              }) => (
                 <>
                   <field.SelectField
                     label="Default variation"
-                    value={getServeSelectValue(
-                      serveMode,
-                      field.state.value,
-                    )}
+                    value={getServeSelectValue(serveMode, field.state.value)}
                     options={createServeOptions(variations)}
                     onValueChange={(value) => {
                       const selected = parseServeSelectValue(String(value))
@@ -55,6 +59,7 @@ export function DefaultRuleSection() {
                     <PercentageRolloutEditor
                       variations={variations}
                       percentages={percentages}
+                      showErrors={showErrors}
                       onChange={(nextPercentages) =>
                         form.setFieldValue(
                           'defaultRolloutPercentages',
@@ -67,6 +72,7 @@ export function DefaultRuleSection() {
                     <ProgressiveRolloutEditor
                       variations={variations}
                       value={progressiveRollout}
+                      showErrors={showErrors}
                       onChange={(nextProgressiveRollout) =>
                         form.setFieldValue(
                           'defaultProgressiveRollout',

@@ -151,7 +151,7 @@ export const featureFlagSchema = z
     metadata: z.array(
       z.object({
         key: z.string().trim().min(1, 'Metadata key is required'),
-        value: z.string(),
+        value: z.string().trim().min(1, 'Metadata value is required'),
       }),
     ),
     variations: z.array(variationSchema).min(2, 'Add at least 2 variations'),
@@ -225,12 +225,12 @@ export const featureFlagSchema = z
       data.defaultServeMode === 'percentage' &&
       data.defaultRolloutPercentages
         .slice(0, names.length)
-        .reduce((sum, value) => sum + value, 0) !== 100
+        .reduce((sum, value) => sum + value, 0) > 100
     ) {
       context.addIssue({
         code: 'custom',
         path: ['defaultRolloutPercentages'],
-        message: 'Rollout percentages must add up to 100%',
+        message: 'Rollout percentages cannot exceed 100%',
       })
     }
     if (data.defaultServeMode === 'progressive') {
@@ -272,12 +272,12 @@ export const featureFlagSchema = z
         rule.serveMode === 'percentage' &&
         rule.rolloutPercentages
           .slice(0, names.length)
-          .reduce((sum, value) => sum + value, 0) !== 100
+          .reduce((sum, value) => sum + value, 0) > 100
       ) {
         context.addIssue({
           code: 'custom',
           path: ['targeting', index, 'rolloutPercentages'],
-          message: 'Rollout percentages must add up to 100%',
+          message: 'Rollout percentages cannot exceed 100%',
         })
       }
       if (rule.serveMode === 'progressive') {

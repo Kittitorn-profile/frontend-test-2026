@@ -135,16 +135,23 @@ export function TargetingSection() {
                       />
                     </div>
 
-                    <RuleBuilder
-                      value={rule.conditions}
-                      onChange={(conditions) => {
-                        const targeting = [
-                          ...(arrayField.state.value as TargetingRule[]),
-                        ]
-                        targeting[index] = { ...rule, conditions }
-                        arrayField.handleChange(targeting)
-                      }}
-                    />
+                    <form.Subscribe
+                      selector={(state) => state.submissionAttempts > 0}
+                    >
+                      {(showErrors) => (
+                        <RuleBuilder
+                          value={rule.conditions}
+                          showErrors={showErrors}
+                          onChange={(conditions) => {
+                            const targeting = [
+                              ...(arrayField.state.value as TargetingRule[]),
+                            ]
+                            targeting[index] = { ...rule, conditions }
+                            arrayField.handleChange(targeting)
+                          }}
+                        />
+                      )}
+                    </form.Subscribe>
 
                     <div className="mt-4 border-t border-border pt-4">
                       <form.AppField name={`targeting[${index}].variation`}>
@@ -167,8 +174,9 @@ export function TargetingSection() {
                                   )}
                                   options={createServeOptions(variations)}
                                   onValueChange={(value) => {
-                                    const selected =
-                                      parseServeSelectValue(String(value))
+                                    const selected = parseServeSelectValue(
+                                      String(value),
+                                    )
                                     if (!selected) return
 
                                     form.setFieldValue(
@@ -190,14 +198,16 @@ export function TargetingSection() {
                         selector={(state) => ({
                           variations: state.values.variations,
                           currentRule: state.values.targeting[index],
+                          showErrors: state.submissionAttempts > 0,
                         })}
                       >
-                        {({ variations, currentRule }) => (
+                        {({ variations, currentRule, showErrors }) => (
                           <>
                             {currentRule.serveMode === 'percentage' ? (
                               <PercentageRolloutEditor
                                 variations={variations}
                                 percentages={currentRule.rolloutPercentages}
+                                showErrors={showErrors}
                                 onChange={(rolloutPercentages) => {
                                   const targeting = [
                                     ...form.getFieldValue('targeting'),
@@ -214,6 +224,7 @@ export function TargetingSection() {
                               <ProgressiveRolloutEditor
                                 variations={variations}
                                 value={currentRule.progressiveRollout}
+                                showErrors={showErrors}
                                 onChange={(progressiveRollout) => {
                                   const targeting = [
                                     ...form.getFieldValue('targeting'),

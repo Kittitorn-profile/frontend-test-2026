@@ -66,6 +66,61 @@ describe('feature flag schema', () => {
     }
   })
 
+  it('reports empty dynamic fields at their exact paths', () => {
+    const values = structuredClone(defaultValues)
+    values.metadata.push({ key: '', value: '' })
+    values.variations[0] = { name: '', value: '' }
+    values.targeting.push(structuredClone(exampleTargetingRule))
+    values.targeting[0].conditions.children[0] = {
+      id: 'empty-condition',
+      type: 'condition',
+      attribute: 'custom',
+      customAttribute: '',
+      operator: 'equals',
+      value: '',
+    }
+
+    const result = featureFlagSchema.safeParse(values)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((issue) => issue.path.join('.'))
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          'metadata.0.key',
+          'metadata.0.value',
+          'variations.0.name',
+          'variations.0.value',
+          'targeting.0.conditions.children.0.customAttribute',
+          'targeting.0.conditions.children.0.value',
+        ]),
+      )
+    }
+  })
+
+  it('accepts a partial percentage rollout and rejects totals over 100%', () => {
+    const partial = structuredClone(defaultValues)
+    partial.defaultServeMode = 'percentage'
+    partial.defaultRolloutPercentages = [24, 2]
+
+    expect(featureFlagSchema.safeParse(partial).success).toBe(true)
+
+    partial.defaultRolloutPercentages = [75, 26]
+    const result = featureFlagSchema.safeParse(partial)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ['defaultRolloutPercentages'],
+            message: 'Rollout percentages cannot exceed 100%',
+          }),
+        ]),
+      )
+    }
+  })
+
   it('creates the expected GoFeatureFlag-style output', () => {
     const output = toFeatureFlagOutput(defaultValues)
 
