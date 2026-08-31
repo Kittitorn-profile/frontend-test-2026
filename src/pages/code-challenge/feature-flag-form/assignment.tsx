@@ -1,6 +1,6 @@
 import Header, { HeaderAssignment } from '#/components/features/header'
 import { Separator } from '#/components/ui/separator'
-import YourCode from './your-codes'
+import YourCode from './your-codes/view'
 
 const FeatureFlagAssignment = () => {
   return (
