@@ -196,8 +196,6 @@ export function FeatureFlagForm() {
   const saveAllFlags = async () => {
     const forms = Array.from(formApis.current.values())
 
-    // Run submit validation for every editor so Standard Schema errors are
-    // distributed to their exact fields (including fields inside arrays).
     await Promise.all(forms.map((form) => form.handleSubmit()))
 
     const results = forms.map((form) =>
